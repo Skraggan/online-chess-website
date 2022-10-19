@@ -5,28 +5,30 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 
-var nickname = "user"
-
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
 io.on('connection', (socket) => {
-  io.emit("chat message", "user connected")
+  let username = "user"
+
+  io.emit("chat message", `${username} connected`)
   socket.on("disconnect", () => {
-    io.emit("chat message", "user disconnected")
+    io.emit("chat message", `${username} disconnected`)
   })
 
   socket.on("chat command", (msg) => {
     msg = msg.slice(1)
     args = msg.split(" ")
-    if (args[0].toLowerCase() == "nickname") {
-      nickname = args[1]
+    if (args[0].toLowerCase() == "username") {
+      io.emit("chat message", `${username} changed name to ${args[1]}`)
+      username = args[1]
     }
   })
 
   socket.on("chat message", (msg) => {
-    io.emit("chat message", msg)
+    msg = `${username}: ` + msg
+    io.emit("chat message", msg)  
   })
 });
 
