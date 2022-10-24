@@ -34,6 +34,11 @@
           if(input.value[0] == "/") {
             socket.emit("chat command", input.value)
           } else {
+          var item = document.createElement("li");
+          item.textContent = "You: " + input.value;
+          messages.appendChild(item);
+          window.scrollTo(0, document.body.scrollHeight)
+
           socket.emit("chat message", input.value);
           }
           input.value = "";

@@ -10,7 +10,7 @@ app.get('/', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  let username = "user"
+  let username = temp_username
 
   io.emit("chat message", `${username} connected`)
   socket.on("disconnect", () => {
@@ -28,7 +28,7 @@ io.on('connection', (socket) => {
 
   socket.on("chat message", (msg) => {
     msg = `${username}: ` + msg
-    io.emit("chat message", msg)  
+    socket.broadcast.emit("chat message", msg)  
   })
 });
 
