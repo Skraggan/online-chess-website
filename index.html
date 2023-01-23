@@ -23,39 +23,35 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
       var socket = io();
-      socket.emit("user typing", "Tjena!");
-      console.log(socket);
-
       var messages = document.getElementById("messages")
       var form = document.getElementById("form")
       var input = document.getElementById("input");
 
-      // form.addEventListener("submit", function(e) {
-      //   e.preventDefault()
-      //   if(input.value) {
-      //     if(input.value[0] == "/") {
-      //       socket.emit("chat command", input.value)
-      //     } else {
-      //     var item = document.createElement("li");
-      //     item.textContent = "You: " + input.value;
-      //     messages.appendChild(item);
-      //     window.scrollTo(0, document.body.scrollHeight)
+      form.addEventListener("submit", function(e) {
+        e.preventDefault()
+        if(input.value) {
+          if(input.value[0] == "/") {
+            socket.emit("chat command", input.value)
+          } else {
+          var item = document.createElement("li");
+          item.textContent = "You: " + input.value;
+          messages.appendChild(item);
+          window.scrollTo(0, document.body.scrollHeight)
+          socket.emit("chat message", input.value);
+          }
+          input.value = "";
+        }
+      })
 
-      //     socket.emit("chat message", input.value);
-      //     }
-      //     input.value = "";
-      //   }
-      // })
-
-      // form.addEventListener("input", function(e) {
-      //   if (input.value) {
-      //     console.log("rah true")
-      //     socket.emit("user typing", socket, true)
-      //   } else {
-      //     console.log("rah false")
-      //     socket.emit("user typing", socket, false)
-      //   }
-      // })
+      form.addEventListener("input", function(e) {
+        if (input.value) {
+          console.log("rah true")
+          socket.emit("user typing", socket.id, true)
+        } else {
+          console.log("rah false")
+          socket.emit("user typing", socket.id, false)
+        }
+      })
 
       socket.on("chat message", function(msg) {
         var item = document.createElement("li");

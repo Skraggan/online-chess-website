@@ -41,22 +41,16 @@ io.on('connection', (socket) => {
     console.log(users)
   })
 
-  socket.on("user typing", (msg) => {
-    console.log("User typed: " + msg);
-  });
-
-
-  socket.on("user typing", (user, state) => {
-    console.log(user);
-      console.log("user typing")
-    user_id = user.id
+  socket.on("user typing", (user_id, state) => {
+    console.log(user_id, state);
     if (state == true) {
-      if (user_id in users_typing){}
-      else {users_typing.push(user_id)}
+      if (users_typing.includes(user_id)){
+        console.log("Already exists")
+      } else {users_typing.push(user_id)}
     } else {
-      if (user_id in users_typing){users_typing.splice((users_typing.indexOf(user_id)), 1)}
+      if (users_typing.includes(user_id)){users_typing.splice((users_typing.indexOf(user_id)), 1)}
     }
-    // console.log(user_id)
+    console.log(users_typing)
   })
 });
 
