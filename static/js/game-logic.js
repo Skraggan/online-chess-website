@@ -24,11 +24,14 @@ function onDrop(source, target) {
   var move = game.move({
     from: source,
     to: target,
-    promotion: "q", // NOTE: always promote to a queen for example simplicity
+    promotion: "q",
   });
 
   // illegal move
   if (move === null) return "snapback";
+
+  socket.emit("move", { from: source, to: target, room: room });
+  console.log(`history: ${game.history()}`);
 
   updateStatus();
 }
@@ -87,36 +90,58 @@ updateStatus();
 
 var socket = io();
 
+let team = null;
+let room = null;
+
 function joinGame(game_data) {
-  game.load(game_data.chessboard_state);
-  board.position(game_data.chessboard_state);
-  socket.emit("join", { room: `${game_data.id}` });
-  console.log(`Succesefully joined room ${game_data.id}!`);
+  console.log(game_data);
+  if (game_data[2] == 1) {
+    team = "white";
+    console.log("Created a new game!");
+    board.orientation("white");
+  } else if (game_data[2] == 0) {
+    console.log("Joined an existing game!");
+    team = "black";
+    board.orientation("black");
+  }
+  game.load(game_data[1]);
+  board.position(game_data[1]);
+  socket.emit("join", { room: `${game_data[0]}` });
+  room = `${game_data[0]}`;
+  console.log(`Succesefully joined room ${game_data[0]}!`);
 }
 
 requesting_game = false;
 
-socket.on("connect", function () {
-  console.log("Now connected to the server!");
+var reqGameBtn = document.getElementById("joinGame");
+reqGameBtn.onclick = function () {
   console.log("Requesting game from server.");
   socket.emit("request_game");
   requesting_game = true;
+};
+
+socket.on("connect", function () {
+  console.log("Now connected to the server!");
   //   socket.emit("get_board", { game_id: "{{ game.id }}" });
 });
 
 socket.on("request_game_response", function (data) {
   if (requesting_game) {
+    console.log(`requested game respone: ${data}`);
     joinGame(data);
   }
   requesting_game = false;
 });
 
-// handle the form submit event to make a move
-function makeMove() {
-  var move = document.getElementById("move-input").value;
-}
+socket.on("message", function (data) {
+  console.log(data);
+});
 
 // update the board when a move is made
 socket.on("move", function (data) {
-  board.position(data);
+  console.log(`Move from: ${data["from"]} to ${data["to"]}`);
+  console.log(
+    game.move({ from: data["from"], to: data["to"], promotion: "q" })
+  );
+  board.position(game.fen());
 });

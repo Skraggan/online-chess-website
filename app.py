@@ -13,15 +13,30 @@ socketio = SocketIO(app)
 
 cursor = db.cursor()
 
+class DB_Game:
+    def __init__(self, id=None, chessboard_state="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", searching=1, paricipants=None) -> None:
+        self.id = id
+        self.chessboard_state = chessboard_state
+        self.searching = searching
+        self.participants = paricipants
+
 def join_game(id):
-    pass
+    print("Joining an existing game!")
+    cursor.execute(f"UPDATE games SET searching = 0 WHERE id = {id}")
+    db.commit()
+    cursor.execute(f"SELECT * FROM games WHERE id = {id}")
+    database_game = cursor.fetchall()[0]
+    database_game = list(database_game)
+    emit("request_game_response", database_game)
 
 def create_new_game():
-    print("creating new game!")
-    cursor.execute(f"INSERT INTO games (chessboard_state, searching) VALUES ('1Q6/5pk1/2p3p1/1p2N2p/1b5P/1bn5/2r3P1/2K5 w - - 16 42', 1)")
+    print("Creating new game!")
+    db_game = DB_Game()
+    cursor.execute(f"INSERT INTO games (chessboard_state, searching) VALUES ('{db_game.chessboard_state}', '{db_game.searching}')")
     db.commit()
-    primary_key = cursor.lastrowid
-    emit("request_game_response", {"chessboard_state":'r6k/p4pb1/2NBr2p/5N2/2PP1pn1/1Q2p3/P3P1Bq/R2R1K2 w - - 3 28', "id":primary_key})
+    db_game.id = cursor.lastrowid
+    database_game = [db_game.id, db_game.chessboard_state, db_game.searching, db_game.participants]
+    emit("request_game_response", database_game)
 
 @app.route('/')
 def index():
@@ -29,37 +44,30 @@ def index():
 
 @socketio.on('request_game')
 def handle_request_game():
-    cursor.execute("SELECT id FROM games where id IS TRUE")
+    cursor.execute("SELECT id FROM games where searching IS TRUE")
     results = cursor.fetchall()
     if results:
-        join_game(results[0][0])
+        join_game(results[-1][0])
     else:
         create_new_game()
 
 @socketio.on("join")
 def on_join(data):
-    username = "someone"
+    username = "Someone"
     room = data["room"]
     join_room(room)
-    send(username + "has joined the game!", to=room)
+    send(username + " has joined the game!", to=room)
 
 @socketio.on("leave")
 def on_leave(data):
-    username = "someone"
+    username = "Someone"
     room = data["room"]
     leave_room(room)
-    send(username + "has left the game!", to=room)
+    send(username + " has left the game!", to=room)
 
-# @socketio.on('move')
-# def handle_move(data):
-#     game = DB_Game.query.get(data['game_id'])
-#     move = chess.Move.from_uci(data['move'])
-#     if move in game.board.legal_moves:
-#         game.board.push(move)
-#         db.session.commit() # save the game state
-#         return game.board.fen() # return the new board state
-#     else:
-#         return 'invalid', 400
+@socketio.on('move')
+def handle_move(data):
+  emit("move", data, room=data["room"])
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
