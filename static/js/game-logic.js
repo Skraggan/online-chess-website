@@ -79,7 +79,6 @@ function updateStatus() {
 
 var config = {
   draggable: true,
-  position: "start",
   onDragStart: onDragStart,
   onDrop: onDrop,
   onSnapEnd: onSnapEnd,
@@ -95,20 +94,20 @@ let room = null;
 
 function joinGame(game_data) {
   console.log(game_data);
-  if (game_data[2] == 1) {
+  if (game_data["searching"] == 1) {
     team = "white";
     console.log("Created a new game!");
     board.orientation("white");
-  } else if (game_data[2] == 0) {
+  } else if (game_data["searching"] == 0) {
     console.log("Joined an existing game!");
     team = "black";
     board.orientation("black");
   }
-  game.load(game_data[1]);
-  board.position(game_data[1]);
-  socket.emit("join", { room: `${game_data[0]}` });
-  room = `${game_data[0]}`;
-  console.log(`Succesefully joined room ${game_data[0]}!`);
+  game.load(game_data["chessboard_state"]);
+  board.position(game_data["chessboard_state"]);
+  socket.emit("join", { room: `${game_data["id"]}` });
+  room = `${game_data["id"]}`;
+  console.log(`Succesefully joined room ${game_data["id"]}!`);
 }
 
 requesting_game = false;
@@ -144,4 +143,5 @@ socket.on("move", function (data) {
     game.move({ from: data["from"], to: data["to"], promotion: "q" })
   );
   board.position(game.fen());
+  updateStatus();
 });
