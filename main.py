@@ -3,14 +3,17 @@ from flask_login import login_user, logout_user, login_required, current_user, U
 from flask_socketio import SocketIO, emit, join_room, leave_room, send
 from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
-import chess
 import os, json
 
+DEV = False
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'krudsoppa'
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", default="krudsoppa")
 db = mysql.connector.connect(
-    host="localhost",
-    user="root",
+    host=os.getenv("MYSQLHOST", default="localhost"),
+    port=os.getenv("MYSQLPORT", default=3306),
+    user=os.getenv("MYSQLUSER", default="root"),
+    password=os.getenv("MYSQLPASSWORD", default="")
 )
 login = LoginManager(app)
 login.init_app(app)
@@ -241,5 +244,7 @@ def handle_move(data):
   db.commit()
   emit("move", data, room=id)
 
+host = "localhost" if DEV else "0.0.0.0"
+
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=DEV, host=host, port=os.getenv("PORT", default=5000))
