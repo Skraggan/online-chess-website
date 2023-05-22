@@ -11,6 +11,6 @@
     "black_pieces_userid": "%s varchar(256)",
     "chessboard_state": "%s varchar(256)",
     "game_finished": "%s bit(1)",
-    "game_info": "%s varchar(256)"
+    "game_info": "%s varchar(5000)"
   }
 }
