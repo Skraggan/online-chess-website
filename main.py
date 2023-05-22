@@ -247,4 +247,4 @@ def handle_move(data):
 host = "localhost" if DEV else "0.0.0.0"
 
 if __name__ == '__main__':
-    socketio.run(app, debug=DEV, host=host, port=os.getenv("PORT", default=5000))
+    socketio.run(app, debug=DEV, host=host, port=os.getenv("PORT", default=5000), allow_unsafe_werkzeug=True)
