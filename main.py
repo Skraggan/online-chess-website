@@ -20,7 +20,7 @@ login.init_app(app)
 socketio = SocketIO(app)
 cursor = db.cursor()
 users_searching = []
-db_name = "online_chess"
+db_name = os.getenv("MYSQLDATABASE", default="online_chess")
 DIR_PATH = os.path.abspath(os.path.dirname(__file__))
 
 # Predefined tables
