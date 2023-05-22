@@ -1,2 +1,3 @@
 # Chess Website
-Omg no way
+
+Online chess website that uses flask, socketio and mysql.

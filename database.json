@@ -1,0 +1,16 @@
+{
+  "users": {
+    "id": "%s int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT",
+    "username": "%s varchar(64)",
+    "email": "%s varchar(120)",
+    "password_hash": "%s varchar(128)"
+  },
+  "games": {
+    "id": "%s int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT",
+    "white_pieces_userid": "%s varchar(256)",
+    "black_pieces_userid": "%s varchar(256)",
+    "chessboard_state": "%s varchar(256)",
+    "game_finished": "%s bit(1)",
+    "game_info": "%s varchar(256)"
+  }
+}

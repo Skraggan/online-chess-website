@@ -1,8 +1,31 @@
 var board = null;
-var game = new Chess();
+var game = new Chess("8/8/8/8/8/8/8/8 w - - 0 1");
 var $status = $("#status");
 var $fen = $("#fen");
 var $pgn = $("#pgn");
+
+var socket = io();
+
+var messages = document.getElementById("messages");
+var form = document.getElementById("form");
+var input = document.getElementById("input");
+
+var started = false;
+var finished = false;
+var team = null;
+var room = null;
+var user = null;
+var chess_opponent_id = null;
+var chess_opponent_username = null;
+var config = {
+  draggable: true,
+  onDragStart: onDragStart,
+  onDrop: onDrop,
+  onSnapEnd: onSnapEnd,
+};
+
+board = Chessboard("board", config);
+updateStatus();
 
 function onDragStart(source, piece, position, orientation) {
   //   do not pick up pieces if the game is over
@@ -30,93 +53,105 @@ function onDrop(source, target) {
   // illegal move
   if (move === null) return "snapback";
 
-  socket.emit("move", { from: source, to: target, room: room });
+  socket.emit("move", {
+    from: source,
+    to: target,
+    room: room,
+    fen: game.fen(),
+  });
   console.log(`history: ${game.history()}`);
 
   updateStatus();
 }
 
-// update the board position after the piece snap
-// for castling, en passant, pawn promotion
 function onSnapEnd() {
   board.position(game.fen());
 }
 
+function finishedGame(result) {
+  finished = true;
+  winner = null;
+  console.log("finished game");
+  if (result == "Svart") {
+    appendChatMessage(`Vita pjäserna vinner!`);
+    winner = "white";
+  } else if (result == "Vit") {
+    appendChatMessage(`Svarta pjäserna vinner!`);
+    winner = "black";
+  } else if (result == "draw") {
+    appendChatMessage(`Det är oavgjort!`);
+    winner = "draw";
+  }
+  socket.emit("finished-game", { pgn: game.pgn(), id: room, result: winner });
+}
+
 function updateStatus() {
   var status = "";
-
-  var moveColor = "White";
-  if (game.turn() === "b") {
-    moveColor = "Black";
-  }
-
-  // checkmate?
-  if (game.in_checkmate()) {
-    status = "Game over, " + moveColor + " is in checkmate.";
-  }
-
-  // draw?
-  else if (game.in_draw()) {
-    status = "Game over, drawn position";
-  }
-
-  // game still on
-  else {
-    status = moveColor + " to move";
-
-    // check?
-    if (game.in_check()) {
-      status += ", " + moveColor + " is in check";
+  if (started == true) {
+    var moveColor = "Vit";
+    if (game.turn() === "b") {
+      moveColor = "Svart";
+    }
+    if (game.in_checkmate()) {
+      status = "Matchen är slut, " + moveColor + " sitter i schackmatt";
+      if (finished == false) {
+        finishedGame(moveColor);
+      }
+    } else if (game.in_draw()) {
+      status = "Matchen är slut, det slutade oavgjort";
+      if (finished == false) {
+        finishedGame("draw");
+      }
+    } else {
+      status = moveColor + "a pjäsernas drag";
+      if (game.in_check()) {
+        status += ", " + moveColor + " sitter i schack";
+      }
+      console.log(status);
     }
 
-    console.log(status);
+    $status.html(status);
+    $fen.html(game.fen());
+    $pgn.html(game.pgn());
   }
-
-  $status.html(status);
-  $fen.html(game.fen());
-  $pgn.html(game.pgn());
 }
-
-var config = {
-  draggable: true,
-  onDragStart: onDragStart,
-  onDrop: onDrop,
-  onSnapEnd: onSnapEnd,
-};
-board = Chessboard("board", config);
-
-updateStatus();
-
-var socket = io();
-
-let team = null;
-let room = null;
 
 function joinGame(game_data) {
-  console.log(game_data);
-  if (game_data["searching"] == 1) {
-    team = "white";
-    console.log("Created a new game!");
+  started = true;
+  finished = false;
+  game = new Chess();
+  messages.innerHTML = "";
+  room = `${game_data["id"]}`;
+  if (game_data["white_pieces_userid"] == user["id"]) {
     board.orientation("white");
-  } else if (game_data["searching"] == 0) {
-    console.log("Joined an existing game!");
-    team = "black";
+    team = "white";
+    chess_opponent_id = game_data["black_pieces_userid"];
+    appendChatMessage(`Motståndare hittad! Du spelar med de vita pjäserna!`);
+  } else {
     board.orientation("black");
+    team = "black";
+    chess_opponent_id = game_data["white_pieces_userid"];
+    appendChatMessage(`Motståndare hittad! Du spelar med de svarta pjäserna!`);
   }
+
+  socket.emit("request_opponent_username", chess_opponent_id);
   game.load(game_data["chessboard_state"]);
   board.position(game_data["chessboard_state"]);
-  socket.emit("join", { room: `${game_data["id"]}` });
-  room = `${game_data["id"]}`;
-  console.log(`Succesefully joined room ${game_data["id"]}!`);
+  console.log("found a game!");
+  updateStatus();
 }
 
-requesting_game = false;
+function appendChatMessage(msg) {
+  var item = document.createElement("li");
+  item.textContent = msg;
+  messages.appendChild(item);
+}
 
 var reqGameBtn = document.getElementById("joinGame");
 reqGameBtn.onclick = function () {
-  console.log("Requesting game from server.");
+  appendChatMessage("Söker efter en motståndare...");
+  socket.emit("request_user");
   socket.emit("request_game");
-  requesting_game = true;
 };
 
 socket.on("connect", function () {
@@ -125,15 +160,35 @@ socket.on("connect", function () {
 });
 
 socket.on("request_game_response", function (data) {
-  if (requesting_game) {
-    console.log(`requested game respone: ${data}`);
-    joinGame(data);
-  }
-  requesting_game = false;
+  joinGame(data);
+});
+
+socket.on("request_opponent_username_response", function (data) {
+  chess_opponent_username = data;
+  appendChatMessage(`Du möter: ${chess_opponent_username}`);
+});
+
+socket.on("request_user_response", function (data) {
+  user = data;
 });
 
 socket.on("message", function (data) {
   console.log(data);
+});
+
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  if (input.value) {
+    socket.emit("send-chat-message", {
+      input: `${user["username"]}: ${input.value}`,
+      room: room,
+    });
+    input.value = "";
+  }
+});
+
+socket.on("chat-message", function (msg) {
+  appendChatMessage(msg);
 });
 
 // update the board when a move is made
